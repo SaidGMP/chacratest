@@ -1,0 +1,5 @@
+- NASA POWER daily point API (PRECTOTCORR, T2M_MIN, GWETROOT): https://power.larc.nasa.gov/
+- pandas, SciPy, requests (Python libraries)
+- INIA native-potato frost tolerance abstract (Quintana et al.)
+- Quinoa frost response study (INIAP)
+- NOAA ONI table (El Niño seasons) [add the link you use]
