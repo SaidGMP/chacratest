@@ -16,6 +16,7 @@ label{display:block;margin:6px 0}input[type=range]{width:100%}input[type=text],s
 table{border-collapse:collapse;width:100%}th,td{padding:5px 6px;border-bottom:1px solid var(--bd);text-align:left;font-size:.92rem}
 .wrap{overflow-x:auto}.best{outline:2px solid var(--ok)}.num{font-variant-numeric:tabular-nums}
 #lang{float:right;padding:6px 12px;border:1px solid var(--bd);border-radius:6px;background:var(--card);color:var(--fg);cursor:pointer}
+#explain,#speak{padding:8px 14px;border:1px solid var(--bd);border-radius:8px;background:var(--card);color:var(--fg);cursor:pointer;font-size:1rem}
 </style>
 </head>
 <body>
@@ -27,6 +28,12 @@ table{border-collapse:collapse;width:100%}th,td{padding:5px 6px;border-bottom:1p
 <h2 data-t="h1"></h2>
 <div class="card"><svg id="chart" viewBox="0 0 700 190" width="100%" role="img"></svg><small id="chartnote"></small></div>
 
+<h2 data-t="h10"></h2>
+<div class="card wrap">
+<label><span data-t="lC"></span> <b id="vC">5</b> <input id="cyc" type="range" min="2" max="8" value="5"></label>
+<label><span data-t="lL"></span> <select id="flv"><option value="d0">≤ 0 °C</option><option value="d2" selected>≤ −2 °C</option><option value="d4">≤ −4 °C</option></select></label>
+<label><span data-t="lNd"></span> <input id="need" type="number" min="0" step="10" style="width:7em"></label>
+<div id="plan"></div><small data-t="pnote"></small></div>
 <h2 data-t="h2"></h2>
 <div class="card">
 <label><span data-t="lD"></span> <b id="vD">25</b> <input id="pD" type="range" min="5" max="40" value="25"></label>
@@ -43,6 +50,9 @@ table{border-collapse:collapse;width:100%}th,td{padding:5px 6px;border-bottom:1p
 <h2 data-t="h5"></h2>
 <div id="res"></div>
 <div class="card conc" id="conc"></div>
+<div class="card"><button id="explain" data-t="bx"></button> <button id="speak" data-t="bs"></button><div id="xp" style="margin-top:8px"></div></div>
+<h2 data-t="h9"></h2>
+<div class="card"><label><span data-t="lI"></span> <input id="inv" type="number" min="0" step="100" style="width:8em"></label><div id="fin"></div><small data-t="fnote"></small></div>
 
 <h2 data-t="h6"></h2>
 <div class="card">
@@ -61,16 +71,16 @@ const D=[[1991,35.16,80,29,0],[1992,94.62,53,17,0],[1993,118.46,23,3,0],[1994,12
 const CROPS={papa:{n:{en:'Potato',es:'Papa'},leg:false,dry:'dry',fr:'d2'},haba:{n:{en:'Faba bean',es:'Haba'},leg:true,dry:'dry',fr:'d2'},quinua:{n:{en:'Quinoa',es:'Quinua'},leg:false,dry:'vdry',fr:'d4'},cebada:{n:{en:'Barley',es:'Cebada'},leg:false,dry:'vdry',fr:'d4'}};
 const ROT=[{id:'A',s:['papa','haba','cebada']},{id:'B',s:['papa','quinua','cebada']},{id:'C',s:['cebada','cebada','cebada']}];
 const FL={d0:'≤ 0 °C',d2:'≤ −2 °C',d4:'≤ −4 °C'};
-let lang=location.hash==='#es'?'es':'en',MON=null;
+let lang=location.hash==='#es'?'es':'en',MON=null,XP='',XO=false,TK=false,SER=null;
 const L={en:{
 intro:'Stress-test of crop rotations for the Moquegua highlands (Carumas, −16.8096, −70.6950) against 35 growing seasons of NASA POWER data (Oct–Apr, 1991–2025). NASA Space Apps 2026 – <i>Field Shift: Adapting Farms with NASA Data</i>.',
-warn:'<b>Read this first.</b> Thresholds are reference values, <b>not validated locally</b>. NASA POWER is a coarse grid (about 50 km) and its rainfall in Carumas is much lower than the station normals quoted in workshop material, so we use <i>relative</i> thresholds (percentiles of the series), not absolute millimetres. A local agronomist should calibrate them. Every control can be changed.',
+warn:'<b>Read this first.</b> Thresholds are reference values, <b>not validated locally</b>. NASA POWER is a coarse grid (about 50 km) and its rainfall at Carumas (about 130 mm per year in this series) is lower than the ~300 mm per year quoted in workshop material (attributed there to Senamhi; we have not verified it), so we use <i>relative</i> thresholds (percentiles of the series), not absolute millimetres. A local agronomist should calibrate them. Every control can be changed.',
 h1:'1. Rainfall by season',h2:'2. What counts as a bad season?',h3:'3. Crop assumptions (editable)',h4:'4. Farmer’s priority',h5:'5. Rotation results (all 3-season windows, 1991–2025)',h6:'6. Do El Niño seasons differ?',h7:'7. Monthly pattern (1991–2025)',h8:'Data, limits and AI use',
 lD:'“Dry” season = rainfall at or below percentile',lV:'“Very dry” season = rainfall at or below percentile',lF:'Frost-bad season = frost nights at or above percentile',lF2:'of all seasons (at least 1 night)',lW:'Weight on soil health vs. climate risk:',lW2:'% soil',
 cnote:'Frost levels: daily minimum air temperature ≤ 0, ≤ −2 or ≤ −4 °C. Sources: INIA native-potato tests (0 °C tolerated, −4 °C tolerated by few accessions); quinoa frost study, INIAP (susceptible cultivar killed at −2 °C at flowering; tolerant ones at −4 °C). Faba bean and barley: <b>assumptions without a source yet</b>.',
 snote:'Soil rule: a legume (faba bean) adds +1; repeating the same crop two seasons in a row subtracts 1. Score = climate safety and soil score, weighted by this slider.',
 lN:'El Niño seasons (sowing year, comma separated; from NOAA’s ONI table – state your criterion):',nnote:'Mann-Whitney U test on seasonal rainfall (normal approximation). With few El Niño seasons the result is indicative, not conclusive.',
-foot:'Data: NASA POWER daily point API, community AG (PRECTOTCORR, T2M_MIN, GWETROOT) – <a href="https://power.larc.nasa.gov/">power.larc.nasa.gov</a>. A season is labelled by its sowing year (2024 = Oct 2024–Apr 2025). The falling trend of frost nights belongs to the gridded product, not to a field measurement. Planned validation: field temperature node (ESP32) vs. NASA POWER, and local agronomist review. Ranges are approximate: there are only 35 seasons. AI use: an AI assistant (Claude, Anthropic) helped discuss approaches; the team reviewed and ran it.',
+foot:'Data: NASA POWER daily point API, community AG (PRECTOTCORR, T2M_MIN, GWETROOT) – <a href="https://power.larc.nasa.gov/">power.larc.nasa.gov</a>. A season is labelled by its sowing year (2024 = Oct 2024–Apr 2025). The falling trend of frost nights belongs to the gridded product, not to a field measurement. Planned validation: field temperature node (ESP32) vs. NASA POWER, and local agronomist review. Ranges are approximate: there are only 35 seasons. AI use: an AI assistant (Claude, Anthropic) helped discuss approaches and draft code and text; the team reviewed and ran it.',
 crop:'Crop',cf:'Counts as failed when rain is…',cf2:'…or frost nights at',dry:'dry',vdry:'very dry',
 rotc:'Rotation',w1:'3-season windows with ≥1 failed season',w2:'Failed seasons (95% range)',w3:'Soil',w4:'Score',
 ref:'(reference, no rotation)',
@@ -81,16 +91,16 @@ conc:(segs)=>`<b>Conclusion.</b> No rotation wins on every criterion. By the wei
 nl:'Enter at least 3 El Niño seasons to run the test.',
 nr:(a,ma,b,mb,U,p)=>`El Niño seasons n = ${a} (median ${ma} mm) vs. other seasons n = ${b} (median ${mb} mm). Mann-Whitney U = ${U}, p = ${p}. ${p<.05?'Statistically significant at 5%.':'No statistically significant difference at 5%.'}`,
 mh:['Month','Mean rain (mm)','Typical range (10–90%)','Nights ≤ −2 °C (mean)'],mn:['','Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],mnone:'Monthly pattern not loaded yet (add monthly.json to the repository).',
-seg:(a,b,r)=>`${a}–${b}% soil → ${r}`,btn:'ES'},
+seg:(a,b,r)=>`${a}–${b}% soil → ${r}`,bx:'Explain this',bs:'🔊 Listen',nosp:'Your browser cannot read text aloud.',nov:'(No voice was found for this language on this device.)',x1:r=>`With your current settings, the best-ranked option is ${r}.`,xl:(n,e,tot,w,f)=>`${n}: flagged in ${e} of ${tot} past seasons (${w} for lack of rain, ${f} for frost).`,x2:d=>`The driest seasons in the record were ${d}.`,xs1:'This rotation includes a legume, which helps the soil.',xs2:'This option repeats the same crop, which wears the soil.',xs0:'This rotation does not add or remove soil points.',x3:'This looks at the past to compare options. It is not a forecast, and the thresholds still need local validation.',h10:'Sowing-month planner (monthly data, 1991–2025)',lC:'Cycle length (months):',lL:'Frost level counted:',lNd:'Minimum rain the crop needs over the cycle, mm (optional; set it with an agronomist):',pnone:'Monthly series not loaded yet (add monthly_series.json to the repository).',ph:['Sowing month','Years','Median rain over the cycle (mm)','Typical range (10–90%)','Years with ≥1 frost night (95% range)'],pw:'Years below the rain need',pnote:'For each sowing month, the cycle is followed month by month in every year of the record: one observation per year (about 35 per sowing month, not 420). Rain comes from a coarse grid and runs lower than station data, so a rain need entered here must be on the same NASA POWER scale. This is not a sowing recommendation: crop calendars must come from INIA/Midagri.',h9:'Investment exposed to climate risk (optional)',lI:'Investment per hectare per season (S/):',fnote:'No prices or yields are used. We only count how many seasons were flagged as bad for the chosen crops, to show how much of the investment sat in flagged seasons. It is not a profit forecast.',ft:(id,nm,avg,ex,tot,mx,wc)=>`<b>${id}. ${nm}</b>: on average ${avg} flagged seasons per 3-season cycle, i.e. S/ ${ex} of S/ ${tot} invested; worst cycle: ${mx} of 3 flagged (S/ ${wc}).`,btn:'ES'},
 es:{
 intro:'Prueba de estrés de rotaciones de cultivos para la sierra de Moquegua (Carumas, −16.8096, −70.6950) con 35 campañas de datos NASA POWER (oct–abr, 1991–2025). NASA Space Apps 2026 – <i>Field Shift: Adapting Farms with NASA Data</i>.',
-warn:'<b>Lea esto primero.</b> Los umbrales son valores de referencia, <b>aún no validados localmente</b>. NASA POWER es una rejilla gruesa (unos 50 km) y su lluvia en Carumas es mucho menor que las normales de estación citadas en el taller, por eso usamos umbrales <i>relativos</i> (percentiles de la serie) y no milímetros absolutos. Un agrónomo local debería calibrarlos. Todos los controles se pueden cambiar.',
+warn:'<b>Lea esto primero.</b> Los umbrales son valores de referencia, <b>aún no validados localmente</b>. NASA POWER es una rejilla gruesa (unos 50 km) y su lluvia en Carumas (unos 130 mm al año en esta serie) es menor que los ~300 mm al año citados en el material del taller (atribuidos allí a Senamhi; no los hemos verificado), por eso usamos umbrales <i>relativos</i> (percentiles de la serie) y no milímetros absolutos. Un agrónomo local debería calibrarlos. Todos los controles se pueden cambiar.',
 h1:'1. Lluvia por campaña',h2:'2. ¿Qué es una campaña mala?',h3:'3. Supuestos por cultivo (editables)',h4:'4. Prioridad del agricultor',h5:'5. Resultados por rotación (todas las ventanas de 3 campañas, 1991–2025)',h6:'6. ¿Difieren los años El Niño?',h7:'7. Patrón mensual (1991–2025)',h8:'Datos, límites y uso de IA',
 lD:'Campaña “seca” = lluvia igual o menor al percentil',lV:'Campaña “muy seca” = lluvia igual o menor al percentil',lF:'Campaña mala por helada = noches de helada iguales o mayores al percentil',lF2:'de todas las campañas (mínimo 1 noche)',lW:'Peso de la salud del suelo frente al riesgo climático:',lW2:'% suelo',
 cnote:'Niveles de helada: temperatura mínima diaria ≤ 0, ≤ −2 o ≤ −4 °C. Fuentes: ensayos de INIA con papa nativa (toleran 0 °C; pocas accesiones toleran −4 °C); estudio de heladas en quinua, INIAP (un cultivar susceptible muere a −2 °C en floración; los tolerantes, a −4 °C). Haba y cebada: <b>supuestos aún sin fuente</b>.',
 snote:'Regla de suelo: una leguminosa (haba) suma +1; repetir el mismo cultivo dos campañas seguidas resta 1. Puntaje = seguridad climática y suelo, ponderados por este control.',
 lN:'Campañas El Niño (año de siembra, separados por coma; de la tabla ONI de NOAA – indique su criterio):',nnote:'Prueba U de Mann-Whitney sobre la lluvia de campaña (aproximación normal). Con pocas campañas El Niño el resultado es orientativo, no concluyente.',
-foot:'Datos: API diaria NASA POWER, comunidad AG (PRECTOTCORR, T2M_MIN, GWETROOT) – <a href="https://power.larc.nasa.gov/">power.larc.nasa.gov</a>. Cada campaña se rotula con su año de siembra (2024 = oct 2024–abr 2025). La tendencia a la baja de las noches de helada es del producto en rejilla, no una medición en chacra. Validación prevista: nodo de temperatura en campo (ESP32) frente a NASA POWER y revisión de un agrónomo local. Los rangos son aproximados: solo hay 35 campañas. Uso de IA: un asistente de IA (Claude, Anthropic) ayudó a discutir enfoques; el equipo lo revisó y ejecutó.',
+foot:'Datos: API diaria NASA POWER, comunidad AG (PRECTOTCORR, T2M_MIN, GWETROOT) – <a href="https://power.larc.nasa.gov/">power.larc.nasa.gov</a>. Cada campaña se rotula con su año de siembra (2024 = oct 2024–abr 2025). La tendencia a la baja de las noches de helada es del producto en rejilla, no una medición en chacra. Validación prevista: nodo de temperatura en campo (ESP32) frente a NASA POWER y revisión de un agrónomo local. Los rangos son aproximados: solo hay 35 campañas. Uso de IA: un asistente de IA (Claude, Anthropic) ayudó a discutir enfoques y a redactar código y texto; el equipo lo revisó y ejecutó.',
 crop:'Cultivo',cf:'Se considera fallido si la lluvia es…',cf2:'…o las noches de helada a',dry:'seca',vdry:'muy seca',
 rotc:'Rotación',w1:'Ventanas de 3 campañas con ≥1 campaña fallida',w2:'Campañas fallidas (rango 95%)',w3:'Suelo',w4:'Puntaje',
 ref:'(referencia, sin rotación)',
@@ -101,7 +111,7 @@ conc:(segs)=>`<b>Conclusión.</b> Ninguna rotación gana en todos los criterios.
 nl:'Ingrese al menos 3 campañas El Niño para correr la prueba.',
 nr:(a,ma,b,mb,U,p)=>`Campañas El Niño n = ${a} (mediana ${ma} mm) frente a otras n = ${b} (mediana ${mb} mm). U de Mann-Whitney = ${U}, p = ${p}. ${p<.05?'Estadísticamente significativo al 5%.':'Sin diferencia estadísticamente significativa al 5%.'}`,
 mh:['Mes','Lluvia media (mm)','Rango típico (10–90%)','Noches ≤ −2 °C (media)'],mn:['','Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'],mnone:'El patrón mensual aún no está cargado (agregue monthly.json al repositorio).',
-seg:(a,b,r)=>`${a}–${b}% suelo → ${r}`,btn:'EN'}};
+seg:(a,b,r)=>`${a}–${b}% suelo → ${r}`,bx:'Explícame esto',bs:'🔊 Escuchar',nosp:'Su navegador no puede leer en voz alta.',nov:'(No se encontró una voz en español en este dispositivo.)',x1:r=>`Con su configuración actual, la mejor opción es ${r}.`,xl:(n,e,tot,w,f)=>`${n}: marcada en ${e} de ${tot} campañas pasadas (${w} por falta de lluvia, ${f} por helada).`,x2:d=>`Las campañas más secas del registro fueron ${d}.`,xs1:'Esta rotación incluye una leguminosa, que ayuda al suelo.',xs2:'Esta opción repite el mismo cultivo, lo que desgasta el suelo.',xs0:'Esta rotación no suma ni resta puntos de suelo.',x3:'Esto mira el pasado para comparar opciones. No es un pronóstico, y los umbrales aún necesitan validación local.',h10:'Planificador por mes de siembra (datos mensuales, 1991–2025)',lC:'Duración del ciclo (meses):',lL:'Nivel de helada contado:',lNd:'Lluvia mínima que necesita el cultivo en el ciclo, mm (opcional; defínala con un agrónomo):',pnone:'La serie mensual aún no está cargada (agregue monthly_series.json al repositorio).',ph:['Mes de siembra','Años','Lluvia mediana del ciclo (mm)','Rango típico (10–90%)','Años con ≥1 noche de helada (rango 95%)'],pw:'Años bajo la lluvia necesaria',pnote:'Para cada mes de siembra se sigue el ciclo mes a mes en cada año del registro: una observación por año (unas 35 por mes de siembra, no 420). La lluvia viene de una rejilla gruesa y es menor que la de estaciones, así que la necesidad de lluvia ingresada debe estar en la misma escala de NASA POWER. No es una recomendación de siembra: los calendarios de cultivo deben venir de INIA/Midagri.',h9:'Inversión expuesta al riesgo climático (opcional)',lI:'Inversión por hectárea por campaña (S/):',fnote:'No se usan precios ni rendimientos. Solo contamos cuántas campañas se marcaron como malas para los cultivos elegidos, para mostrar cuánta inversión estuvo en campañas marcadas. No es una proyección de ganancia.',ft:(id,nm,avg,ex,tot,mx,wc)=>`<b>${id}. ${nm}</b>: en promedio ${avg} campañas marcadas por ciclo de 3 campañas, es decir S/ ${ex} de S/ ${tot} invertidos; peor ciclo: ${mx} de 3 marcadas (S/ ${wc}).`,btn:'EN'}};
 const t=k=>L[lang][k],$=id=>document.getElementById(id);
 function q(a,p){const s=[...a].sort((x,y)=>x-y),pos=(s.length-1)*p,lo=Math.floor(pos),hi=Math.ceil(pos);return s[lo]+(s[hi]-s[lo])*(pos-lo)}
 function erf(x){const s=x<0?-1:1;x=Math.abs(x);const u=1/(1+.3275911*x);return s*(1-(((((1.061405429*u-1.453152027)*u)+1.421413741)*u-.284496736)*u+.254829592)*u*Math.exp(-x*x))}
@@ -111,7 +121,7 @@ function mwu(a,b){const all=[...a.map(v=>({v,g:0})),...b.map(v=>({v,g:1}))].sort
  return{U,p:Math.max(0,Math.min(1,2*(1-.5*(1+erf(z/Math.SQRT2)))))}}
 function wilson(p,n){const z=1.96,d=1+z*z/n,c=(p+z*z/(2*n))/d,h=z*Math.sqrt(p*(1-p)/n+z*z/(4*n*n))/d;return[Math.max(0,c-h),Math.min(1,c+h)]}
 function rname(R){const nm=R.s.map(k=>CROPS[k].n[lang]);return nm.every(x=>x===nm[0])?`${nm[0]} × 3 ${t('ref')}`:nm.join(' → ')}
-function apply(){document.documentElement.lang=lang;document.querySelectorAll('[data-t]').forEach(e=>e.innerHTML=t(e.dataset.t));$('lang').textContent=t('btn');buildCrops();run()}
+function apply(){document.documentElement.lang=lang;document.querySelectorAll('[data-t]').forEach(e=>e.innerHTML=t(e.dataset.t));$('lang').textContent=t('btn');buildCrops();run();planner()}
 function buildCrops(){let h=`<tr><th>${t('crop')}</th><th>${t('cf')}</th><th>${t('cf2')}</th></tr>`;
  for(const k in CROPS){const c=CROPS[k];h+=`<tr><td>${c.n[lang]}</td><td><select data-k="${k}" data-f="dry">${['dry','vdry'].map(v=>`<option value="${v}"${c.dry===v?' selected':''}>${t(v)}</option>`).join('')}</select></td><td><select data-k="${k}" data-f="fr">${Object.keys(FL).map(f=>`<option value="${f}"${c.fr===f?' selected':''}>${FL[f]}</option>`).join('')}</select></td></tr>`}
  $('crops').innerHTML=h;$('crops').querySelectorAll('select').forEach(s=>s.onchange=e=>{CROPS[e.target.dataset.k][e.target.dataset.f]=e.target.value;run()})}
@@ -127,9 +137,9 @@ function run(){
  s+=`<text x="0" y="185" font-size="10" fill="var(--mut)">${D[0].y}</text><text x="${W-26}" y="185" font-size="10" fill="var(--mut)">${D[D.length-1].y}</text>`;
  $('chart').innerHTML=s;$('chartnote').textContent=t('cn')(rain.filter(v=>v<=tD).length);
  const fail=(k,r)=>{const c=CROPS[k];return (c.dry==='dry'?r.rain<=tD:r.rain<=tV)||r[c.fr]>=tf[c.fr]};
- const base=ROT.map(R=>{let nw=0,wf=0,tfail=0;for(let i=0;i+2<D.length;i++){let f=0;R.s.forEach((k,j)=>{if(fail(k,D[i+j]))f++});nw++;if(f)wf++;tfail+=f}
+ const base=ROT.map(R=>{let nw=0,wf=0,tfail=0,mx=0;for(let i=0;i+2<D.length;i++){let f=0;R.s.forEach((k,j)=>{if(fail(k,D[i+j]))f++});nw++;if(f)wf++;tfail+=f;mx=Math.max(mx,f)}
   let soil=0;R.s.forEach((k,j)=>{if(CROPS[k].leg)soil++;if(j&&R.s[j-1]===k)soil--});
-  const rate=tfail/(3*nw);return{R,nw,wf,rate,soil,sn:Math.max(0,Math.min(100,(soil+2)/3*100)),ci:wilson(rate,D.length)}});
+  const rate=tfail/(3*nw);return{R,nw,wf,rate,mx,soil,sn:Math.max(0,Math.min(100,(soil+2)/3*100)),ci:wilson(rate,D.length)}});
  const sc=(o,x)=>(1-x)*100*(1-o.rate)+x*o.sn;
  const out=base.map(o=>({...o,score:sc(o,w)})).sort((a,b)=>b.score-a.score);
  const byRate=[...base].sort((a,b)=>a.rate-b.rate).map(o=>o.R.id),dot=id=>{const i=byRate.indexOf(id);return i===0?'🟢':i===byRate.length-1?'🔴':'🟡'};
@@ -137,13 +147,35 @@ function run(){
  <div class="card">${t('plain')(out[0].R.id+' ('+rname(out[0].R)+')',out[0].wf,out[0].nw)}</div>`;
  const segs=[];let prev=null;for(let x=0;x<=100;x++){const b=[...base].sort((p,q2)=>sc(q2,x/100)-sc(p,x/100))[0].R.id;if(b!==prev){segs.push({id:b,a:x});prev=b}}
  $('conc').innerHTML=t('conc')(segs.map((g,i)=>t('seg')(g.a,i+1<segs.length?segs[i+1].a-1:100,g.R||`${g.id}. ${rname(ROT.find(r=>r.id===g.id))}`)).join('; '));
+ const inv=+$('inv').value;$('fin').innerHTML=inv>0?base.map(o=>t('ft')(o.R.id,rname(o.R),(o.rate*3).toFixed(1),Math.round(inv*o.rate*3).toLocaleString(),(inv*3).toLocaleString(),o.mx,(inv*o.mx).toLocaleString())).join('<br>'):'';
+ const bst=out[0],xl=[...new Set(bst.R.s)].map(k=>{const c=CROPS[k];let wc=0,fc=0,ea=0;D.forEach(r=>{const a=c.dry==='dry'?r.rain<=tD:r.rain<=tV,b=r[c.fr]>=tf[c.fr];if(a)wc++;if(b)fc++;if(a||b)ea++});return t('xl')(c.n[lang],ea,D.length,wc,fc)}),dr=[...D].sort((a,b)=>a.rain-b.rain).slice(0,3).map(r=>r.y).join(', ');
+ XP=[t('x1')(rname(bst.R)),...xl,t('x2')(dr),bst.soil>0?t('xs1'):bst.soil<0?t('xs2'):t('xs0'),t('x3')].join(' ');if(XO)$('xp').textContent=XP;
  const ys=new Set($('nino').value.split(/[^0-9]+/).filter(Boolean).map(Number)),a=D.filter(r=>ys.has(r.y)).map(r=>r.rain),b=D.filter(r=>!ys.has(r.y)).map(r=>r.rain);
  if(a.length<3||b.length<3)$('nres').textContent=t('nl');else{const m=mwu(a,b);$('nres').textContent=t('nr')(a.length,q(a,.5).toFixed(0),b.length,q(b,.5).toFixed(0),m.U.toFixed(1),+m.p.toFixed(3))}
  if(!MON)$('mon').innerHTML=`<small>${t('mnone')}</small>`;else $('mon').innerHTML=`<table><tr>${t('mh').map(x=>`<th>${x}</th>`).join('')}</tr>${[10,11,12,1,2,3,4].map(m=>{const r=MON[m];return r?`<tr><td>${t('mn')[m]}</td><td class="num">${r.rain_mean}</td><td class="num">${r.rain_p10}–${r.rain_p90}</td><td class="num">${r.d2_mean}</td></tr>`:''}).join('')}</table>`;
 }
+function planner(){
+ const L0=+$('cyc').value,lv=$('flv').value,need=+$('need').value||0;$('vC').textContent=L0;
+ if(!SER){$('plan').innerHTML=`<small>${t('pnone')}</small>`;return}
+ const ys=Object.keys(SER).map(Number).sort((a,b)=>a-b),ix=lv==='d0'?1:lv==='d2'?2:3;let rows='';
+ for(let k=0;k<12;k++){const m0=(9+k)%12,cum=[],fr=[];
+  ys.forEach(y=>{let rs=0,fs=0,ok=true;for(let j=0;j<L0;j++){const mi=m0+j,a=SER[y+Math.floor(mi/12)]&&SER[y+Math.floor(mi/12)][mi%12];if(!a){ok=false;break}rs+=a[0];fs+=a[ix]}if(ok){cum.push(rs);fr.push(fs)}});
+  const n=cum.length;if(!n)continue;const pf=fr.filter(v=>v>=1).length/n,ci=wilson(pf,n);
+  rows+=`<tr><td>${t('mn')[m0+1]}</td><td class="num">${n}</td><td class="num">${q(cum,.5).toFixed(0)}</td><td class="num">${q(cum,.1).toFixed(0)}–${q(cum,.9).toFixed(0)}</td><td class="num">${(pf*100).toFixed(0)}% (${(ci[0]*100).toFixed(0)}–${(ci[1]*100).toFixed(0)}%)</td>${need?`<td class="num">${(cum.filter(v=>v<need).length/n*100).toFixed(0)}%</td>`:''}</tr>`}
+ $('plan').innerHTML=`<table><tr>${t('ph').map(x=>`<th>${x}</th>`).join('')}${need?`<th>${t('pw')}</th>`:''}</tr>${rows}</table>`}
+['cyc','flv','need'].forEach(id=>$(id).oninput=planner);
 ['pD','pV','pF','w','nino'].forEach(id=>$(id).oninput=run);
+$('explain').onclick=()=>{XO=!XO;$('xp').textContent=XO?XP:''};
+$('speak').onclick=()=>{if(!('speechSynthesis' in window)){alert(t('nosp'));return}const sy=window.speechSynthesis;
+ if(TK){sy.cancel();TK=false;return}
+ sy.cancel();XO=true;$('xp').textContent=XP;
+ const pre=lang==='es'?'es':'en',vs=sy.getVoices(),vo=vs.find(v=>v.lang.toLowerCase().startsWith(pre+'-pe'))||vs.find(v=>v.lang.toLowerCase().startsWith(pre))||null,parts=XP.match(/[^.!?]+[.!?]*/g)||[XP];
+ TK=true;
+ parts.forEach((x,i)=>{const u=new SpeechSynthesisUtterance(x.trim());if(vo){u.voice=vo;u.lang=vo.lang}else u.lang=lang==='es'?'es-ES':'en-US';u.rate=.95;if(i===parts.length-1){u.onend=u.onerror=()=>{TK=false}}sy.speak(u)});
+ setTimeout(()=>{if(TK&&!sy.speaking&&!sy.pending){TK=false;$('xp').textContent=XP+' '+t('nov')}},1500)};
 $('lang').onclick=()=>{lang=lang==='en'?'es':'en';apply()};
 fetch('monthly.json').then(r=>r.ok?r.json():null).then(j=>{if(j){MON=j;run()}}).catch(()=>{});
+fetch('monthly_series.json').then(r=>r.ok?r.json():null).then(j=>{if(j){SER=j;planner()}}).catch(()=>{});
 apply();
 </script>
 </body>
